@@ -25,7 +25,7 @@ function SockView(){
   // sockType 값을 sockTypes에서 find 하자. 그 결과에서 image 속성 값을 추출하자.
 
   console.log('sockType:', sockType.sockType);
-console.log('sockTypes:', sockTypes);
+  console.log('sockTypes:', sockTypes);
   let result = sockTypes.find((val,idx)=> {return val.name===sockType.sockType}) //아 첫번째 인자가 val이였나 헷갈림
   console.log("find결과!!",result);
 
