@@ -9,8 +9,8 @@ import { useSelector, useDispatch } from 'react-redux';
 function SockCanvas() {
   const canvasRef = useRef(null);
   //store에서 state 꺼내오기 state 구조 어떻게 할까 [{}, {}]
- // const sockColor = useSelector((state) => state.sock.sockColor);
-  //console.log('sockColor는?? ' , sockColor);
+  const sockColor = useSelector((state) => state.sock.sockColor);
+  console.log('sockColor는?? ' , sockColor);
 
 
 
@@ -41,10 +41,10 @@ function SockCanvas() {
     // 3. 양말 SVG를 순서대로 Canvas에 추가
     const loadSock = async () => {
       //각 SVG 파일의 내부 요소만 Fabir객체로 그룹화하는 함수
-      await addSvg(bodySvg, 'skyblue');
-      await addSvg(cuffSvg, 'white');
-      await addSvg(heelSvg, 'white');
-      await addSvg(toeSvg, 'white');
+      await addSvg(bodySvg, sockColor.body);
+      await addSvg(cuffSvg, sockColor.cuff);
+      await addSvg(heelSvg, sockColor.heel);
+      await addSvg(toeSvg, sockColor.toe);
 
       canvas.requestRenderAll();
     };
@@ -55,7 +55,7 @@ function SockCanvas() {
     return () => {
       canvas.dispose();
     };
-  }, []);
+  });
 
   return <canvas ref={canvasRef} />;
 }

@@ -1,18 +1,26 @@
 import { useState } from "react";
 import { useSelector,useDispatch } from "react-redux";
-import { changeSockType } from "../store/store";
+import { changeSockType,changeSockColor } from "../store/store";
 
 
 // 3-3) 파일명과 동일한 SideBar 함수 안에서 useDispatch호출, 메소드 생성을 해야돼. 작성 규칙이야
 function SideBar(){
   
   const [active, setActive] = useState(false);
+  const [sect, setSect] = useState(null);
+
   const types = ['단목','중목','장목','축구','페이크'];
+  const section = ['body', 'cuff',  'heel', 'toe'];
+  const color = ['green', 'blue', 'yellow', 'orange', 'purple'];
   let dispatch = useDispatch();
 
   function changeSock(val){
     // 3-2) store action 호출하면서 파라미터로 전달해주자~ action dispatch 어떻게 했었더라?
     dispatch(changeSockType(val));
+  }
+  function changeColor(color){
+    dispatch(changeSockColor({section : sect, color : color}));
+    console.log("변경할 부위, color =",sect, color);
   }
   
   return (
@@ -51,11 +59,37 @@ function SideBar(){
           }
         </div>
 
-        <div className="toggle-tab tab2"></div>
+        <div className={`toggle-tab tab2 ${active ? 'active':''}`} onClick={()=>setActive(!active)}>
+          <div className="toggle-name"><span>양말색상 선택</span> </div>
+          <div className="arrow"></div>
+        </div>
+        <div className="toggle-content">
+          {
+            section.map((sec)=>
+            (
+              <button onClick={() => setSect(sec)}>{sec}</button>
+              // <button onClick={() => changeSockColor(type)}>{type}양말</button>
+
+            ))  
+          }
+        </div>
+
         <div className="toggle-tab tab3"></div>
         <div className="toggle-tab tab4"></div>
+        
       </div>
       
+      
+      <div className="toggle-content">
+        {
+          color.map((col)=>
+          (
+            <button onClick={() => changeColor(col)}>{col}</button>
+            // <button onClick={() => changeSockColor(type)}>{type}양말</button>
+
+          ))  
+        }
+      </div>
       </>
   )
 }

@@ -9,10 +9,10 @@ let sock = createSlice({
     initialState: { 
         sockType: '축구',
         sockColor : {
-            bodySvg : 'white', 
-            cuffSvg : 'white', 
-            heelSvg : 'white', 
-            toeSvg : 'white'
+            body : 'white', 
+            cuff : 'green', 
+            heel : 'blue', 
+            toe : 'green'
         } 
     },
 
@@ -21,7 +21,14 @@ let sock = createSlice({
             state.sockType = action.payload;
         },
         changeSockColor(state,action){
-            state.sockColor = action.payload;
+            //paylod로 section, color가 들어오
+            //section에 해당하는 key 의 value를 color로 교체
+            //state.sockColor = action.payload;
+            const sect = action.payload.section;
+            const col = action.payload.color;
+            console.log("payload 출력들어가유~", sect);
+            state.sockColor[sect] = col;
+
         }
     }
 })
@@ -40,4 +47,4 @@ export default configureStore({
     }
 })
 
-export let {changeSockType} = sock.actions;
+export let {changeSockType,changeSockColor } = sock.actions;
