@@ -11,7 +11,7 @@ import SockCanvas from './SockCanvas';
 //   여기선 이미지를 컴폰넌트가 관리해야하니깐 import를 하는 방법을 사용하는게 적절해.
 
 function SockView(){
-  let sockType = useSelector((state) => state.sockType)
+  let sockType = useSelector((state) => state.sock.sockType)
   console.log('sockType store로 관리한다!!!!',sockType);
 
   const sockTypes=[
@@ -24,9 +24,9 @@ function SockView(){
   // 이제 state 값 가지고 와서 name과 동일한 idx의 image 값을 아래 img src 값으로 주면 되겠다.
   // sockType 값을 sockTypes에서 find 하자. 그 결과에서 image 속성 값을 추출하자.
 
-  console.log('sockType:', sockType.sockType);
+  console.log('sockType:', sockType);
   console.log('sockTypes:', sockTypes);
-  let result = sockTypes.find((val,idx)=> {return val.name===sockType.sockType}) //아 첫번째 인자가 val이였나 헷갈림
+  let result = sockTypes.find((val,idx)=> {return val.name===sockType}) //아 첫번째 인자가 val이였나 헷갈림
   console.log("find결과!!",result);
 
 
@@ -39,7 +39,7 @@ function SockView(){
       
       <SockCanvas/>
 
-      
+
       {/* 여기에 이미지를 보여주어야 하는데 일단 원하는 위치에 보여주는 것부터 하자 
           이제 SideBar에서 
       */}

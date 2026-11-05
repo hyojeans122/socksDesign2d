@@ -35,7 +35,7 @@ let sock = createSlice({
 
 export default configureStore({
     reducer: {
-        sockType: sock.reducer,
+        sock: sock.reducer,
       
     }
 })
