@@ -8,11 +8,20 @@ let sock = createSlice({
     // 양말 종류 state를 정의합시다.  이렇게 정의하면 되나..?어떻게 정의하지
     initialState: { 
         sockType: '축구',
+        sockColor : {
+            bodySvg : 'white', 
+            cuffSvg : 'white', 
+            heelSvg : 'white', 
+            toeSvg : 'white'
+        } 
     },
 
     reducers: {
         changeSockType(state,action){
             state.sockType = action.payload;
+        },
+        changeSockColor(state,action){
+            state.sockColor = action.payload;
         }
     }
 })
@@ -26,7 +35,8 @@ let sock = createSlice({
 
 export default configureStore({
     reducer: {
-        sockType: sock.reducer
+        sockType: sock.reducer,
+      
     }
 })
 

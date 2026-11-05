@@ -4,7 +4,7 @@ import longImg from '../assets/장목.png';
 import soccerImg from '../assets/축구.png';
 import fakeImg from '../assets/페이크.png';
 import { useDispatch, useSelector } from 'react-redux';
-
+import SockCanvas from './SockCanvas';
 
 //3. 양말 이미지 경로 변수화해주기. 어떻게 했었지?
 //   이미지 넣는 법은 2가지거든, assert폴더에 넣고 import 하는 방법 vs public 폴더에 넣고 경로자체를 가져와 쓰는법
@@ -30,18 +30,29 @@ function SockView(){
   console.log("find결과!!",result);
 
 
-    return( 
-    <>
-      <div className="socks-view">
-      <div className="socks-view-inner">
-        {/* 여기에 이미지를 보여주어야 하는데 일단 원하는 위치에 보여주는 것부터 하자 
-            이제 SideBar에서 
-        */}
-        <img src={result.image} alt="" />
-      </div>
-      </div>
+
+  
+  return( 
+  <>
+    <div className="socks-view">
+    <div className="socks-view-inner">
       
-    </>
+      <SockCanvas/>
+
+      
+      {/* 여기에 이미지를 보여주어야 하는데 일단 원하는 위치에 보여주는 것부터 하자 
+          이제 SideBar에서 
+      */}
+      <img src={result.image} alt="" />  
+
+
+      {/* canvas 띄우자 */}
+      
+
+    </div>
+    </div>
+    
+  </>
   )
 }
 
