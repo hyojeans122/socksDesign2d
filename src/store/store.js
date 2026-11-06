@@ -33,6 +33,18 @@ let sock = createSlice({
     }
 })
 
+let customSock = createSlice({
+    name : 'customSock',
+    initialState : {
+        img : null
+    },
+    reducers: {
+        addImg(state,action){
+            state.img = action.payload;
+        }
+    }
+})
+
 // 왜 이건 안되고 아래 코드는 되지?
 // export const store = configureStore({
 //   reducer: {
@@ -43,8 +55,9 @@ let sock = createSlice({
 export default configureStore({
     reducer: {
         sock: sock.reducer,
-      
+        customSock : customSock.reducer
     }
 })
 
 export let {changeSockType,changeSockColor } = sock.actions;
+export let {addImg } = customSock.actions;

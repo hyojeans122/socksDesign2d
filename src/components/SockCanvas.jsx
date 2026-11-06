@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Canvas, loadSVGFromURL, util } from 'fabric';
+import { Canvas, loadSVGFromURL, util, FabricImage } from 'fabric';
 import bodySvg from '../assets/body.svg';
 import cuffSvg from '../assets/cuff.svg';
 import heelSvg from '../assets/heel.svg';
@@ -11,6 +11,8 @@ function SockCanvas() {
   //store에서 state 꺼내오기 state 구조 어떻게 할까 [{}, {}]
   const sockColor = useSelector((state) => state.sock.sockColor);
   console.log('sockColor는?? ' , sockColor);
+  const imgUrl = useSelector((state)=>state.customSock.img);
+  console.log('img=',imgUrl);
 
 
 
@@ -51,11 +53,33 @@ function SockCanvas() {
 
     loadSock();
 
-    // 4. 컴포넌트 제거 시 Canvas 정리
+
+
+    //4. 이미지 fabric img 객체로 변환
+    const handleImageUpload = async (e) => {
+    //const file = img;
+    //if (!file) return;
+    //const imageUrl = URL.createObjectURL(file);
+
+    try {
+        const img = await FabricImage.fromURL(imgUrl);
+
+        canvas.add(img);
+        canvas.requestRenderAll();
+    } finally {
+        URL.revokeObjectURL(imgUrl);
+    }
+    };
+    handleImageUpload();
+
+
+    // 마지막. 컴포넌트 제거 시 Canvas 정리
     return () => {
       canvas.dispose();
     };
-  });
+
+
+  }, [imgUrl]);
 
   return <canvas ref={canvasRef} />;
 }
