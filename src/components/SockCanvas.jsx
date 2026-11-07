@@ -13,6 +13,7 @@ function SockCanvas() {
   console.log('sockColor는?? ' , sockColor);
   const imgUrl = useSelector((state)=>state.customSock.img);
   console.log('img=',imgUrl);
+  const sockShapeRef = useRef(null);
 
 
 
@@ -37,6 +38,11 @@ function SockCanvas() {
         evented: false,
       });
 
+      //bodySvg 패브릭 객체 저장 (clipPath의 범위를 지정하기 위해서)
+      if (url === bodySvg) {
+            sockShapeRef.current = svgObject;
+        }
+
       canvas.add(svgObject);
     };
 
@@ -55,7 +61,7 @@ function SockCanvas() {
 
 
 
-    //4. 이미지 fabric img 객체로 변환
+    // 4. 이미지 fabric img 객체로 변환
     const handleImageUpload = async (e) => {
     //const file = img;
     //if (!file) return;
@@ -63,6 +69,34 @@ function SockCanvas() {
 
     try {
         const img = await FabricImage.fromURL(imgUrl);
+
+        // 5. 이미지 이동 영역제한 : bodySvg 영역을 이미지 clone:클리핑 영역으로 지정
+        // 5-1. 이미지 크기 설정
+        img.scaleToWidth(70);
+        img.scaleToHeight(70);
+
+        // 5-2. bodySvg 중심 좌표 가져오기
+        const center = sockShapeRef.current.getCenterPoint();
+
+        // 5-3. 이미지 중심을 bodySvg 중심에 배치
+        img.set({
+            left: center.x + 25,
+            top: center.y - 200,
+            originX: 'center',
+            originY: 'center',
+        });
+
+        // 5-4. 클리핑 적용
+        const sockShape = await sockShapeRef.current.clone();
+
+        sockShape.set({
+            absolutePositioned: true,
+        });
+        img.clipPath = sockShape;
+        // 5. end
+
+
+
 
         canvas.add(img);
         canvas.requestRenderAll();
