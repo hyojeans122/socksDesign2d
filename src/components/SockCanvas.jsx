@@ -7,66 +7,107 @@ import toeSvg from '../assets/toe.svg';
 import { useSelector, useDispatch } from 'react-redux';
 
 function SockCanvas() {
-  const canvasRef = useRef(null);
-  //store에서 state 꺼내오기 state 구조 어떻게 할까 [{}, {}]
+  const canvasRef = useRef(null);// HTML canvas 참조
+  const fabricRef = useRef(null); // Fabric Canvas 객체 참조
+  const sockSvg = useRef({body: null, cuff: null, heel: null, toe: null}); // sock svg Fabric객체 참조
   const sockColor = useSelector((state) => state.sock.sockColor);
-  console.log('sockColor는?? ' , sockColor);
   const imgUrl = useSelector((state)=>state.customSock.img);
-  console.log('img=',imgUrl);
-  const sockShapeRef = useRef(null);
+  const sockShapeRef = useRef(null); //클리핑 영역
+
+     
+    //SVG 파일을 Fabric 객체로 변환하는 함수
+    async function addSvg(url,section) {
+    const { objects, options } = await loadSVGFromURL(url);
+    const svgObject = util.groupSVGElements(objects, options);
+
+    svgObject.set({
+        fill: 'white',
+        selectable: false,
+        evented: false,
+    });
+
+    if (url === bodySvg) {
+        sockShapeRef.current = svgObject;
+    }
+
+    sockSvg.current[section] = svgObject;
+
+    fabricRef.current.add(svgObject);
 
 
+    }
 
 
+    function editSvg(section, color) {
+    //sockColor [{},{},{},{}] 로 되어 있어서 아래 코드 구조변경필요함
+    sockSvg.current[section].set({
+        fill: color,
+    });
 
-  useEffect(() => {
-    // 1. Fabric Canvas 생성
+    fabricRef.current.requestRenderAll();
+    }
+
+  // refactor : canvas 생성 useEffect : 최초 마운트 시 1회 실행
+    useEffect(() => {
+    // STEP1) Fabric Canvas 생성
     const canvas = new Canvas(canvasRef.current, {
       width: window.innerWidth,
       height: window.innerHeight,
       backgroundColor: '#f5f5f5',
     });
+    fabricRef.current=canvas;
 
-    // 2. SVG 파일을 Fabric 객체로 변환하는 함수
-    const addSvg = async (url, color) => {
-      const { objects, options } = await loadSVGFromURL(url);
-      const svgObject = util.groupSVGElements(objects, options);
-
-      svgObject.set({
-        fill: color,
-        selectable: false,
-        evented: false,
-      });
-
-      //bodySvg 패브릭 객체 저장 (clipPath의 범위를 지정하기 위해서)
-      if (url === bodySvg) {
-            sockShapeRef.current = svgObject;
-        }
-
-      canvas.add(svgObject);
+    // 컴포넌트가 unmount 될 때 실행되는 코드입니다
+    return () => {
+        fabricRef.current = null;
+        canvas.dispose();
     };
 
-    // 3. 양말 SVG를 순서대로 Canvas에 추가
-    const loadSock = async () => {
-      //각 SVG 파일의 내부 요소만 Fabir객체로 그룹화하는 함수
-      await addSvg(bodySvg, sockColor.body);
-      await addSvg(cuffSvg, sockColor.cuff);
-      await addSvg(heelSvg, sockColor.heel);
-      await addSvg(toeSvg, sockColor.toe);
+    },[]);
+ 
+ 
+    // refactor : 양말 svg 렌더링 useEffect : 양말 svg 가 변경될 때마다 실행
+    useEffect(() => {
+        // 양말 SVG를 순서대로 Canvas에 추가
+        const loadSock = async () => {
+        // 각 SVG를 Fabir객체로 만들기
+        addSvg(bodySvg, 'body');
+        addSvg(cuffSvg, 'cuff');
+        addSvg(heelSvg, 'heel');
+        addSvg(toeSvg, 'toe');
 
-      canvas.requestRenderAll();
-    };
+        fabricRef.current.requestRenderAll();
+        };
 
-    loadSock();
+        loadSock();
+    
+    },[]); ////////SVG 파일을 현재엔 import한 url로 고정되어 있음. 추후에 양말 형태 state로 구현했을 때 useEffect [양말형태state변수] 로 변경해줘야함. []안에 변수 추가하는 걸 뭐라고 불렀지?
 
 
 
-    // 4. 이미지 fabric img 객체로 변환
+
+
+  // refactor :  양말 부위별 색상 변경 렌더링 useEffect : 양말 색상(sockColor)가 변경될 때마다 실행
+    useEffect(() => {
+        // 양말 SVG를 순서대로 Canvas에 추가
+        const loadSock = async () => {
+        // 각 SVG를 Fabir객체로 만들기
+        await editSvg('body', sockColor.body);
+        await editSvg('cuff', sockColor.cuff);
+        await editSvg('heel', sockColor.heel);
+        await editSvg('toe', sockColor.toe);
+
+        fabricRef.current.requestRenderAll();
+        };
+
+        loadSock();
+    
+    },[sockColor]);
+
+  // refactor :  첨부 이미지 렌더링 및 클리핑 마스크로 이동영역제한 useEffect : 첨부이미지(imgUrl)이 변경될 때마다 실행 
+    useEffect(() => {
+        
     const handleImageUpload = async (e) => {
-    //const file = img;
-    //if (!file) return;
-    //const imageUrl = URL.createObjectURL(file);
-
     try {
         const img = await FabricImage.fromURL(imgUrl);
 
@@ -96,24 +137,26 @@ function SockCanvas() {
         // 5. end
 
 
-
-
-        canvas.add(img);
-        canvas.requestRenderAll();
+        fabricRef.current.add(img);
+        fabricRef.current.requestRenderAll();
     } finally {
         URL.revokeObjectURL(imgUrl);
     }
     };
     handleImageUpload();
 
-
-    // 마지막. 컴포넌트 제거 시 Canvas 정리
-    return () => {
-      canvas.dispose();
-    };
+    },[imgUrl]);
 
 
-  }, [imgUrl]);
+
+
+
+
+
+
+
+
+
 
   return <canvas ref={canvasRef} />;
 }
