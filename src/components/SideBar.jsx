@@ -4,7 +4,7 @@ import { changeSockType,changeSockColor, addImg } from "../store/store";
 
 
 // 3-3) 파일명과 동일한 SideBar 함수 안에서 useDispatch호출, 메소드 생성을 해야돼. 작성 규칙이야
-function SideBar(){
+function SideBar({ exportPNG }){
   
   const [active, setActive] = useState(false);
   const [sect, setSect] = useState(null);
@@ -34,6 +34,27 @@ function SideBar(){
   };
   // 이미지 업로드 기능 끝
   
+    function handleClick() {
+    const png = exportPNG.current.exportPNG();
+    console.log(png);
+  }
+
+  function handleDownloadPNG() {
+  console.log('1. 다운로드 버튼 클릭');
+
+  console.log('2. ref 확인:', exportPNG.current);
+
+  if (!exportPNG.current) {
+    console.log('ref가 연결되지 않음');
+    return;
+  }
+
+  console.log('3. exportPNG 함수 확인:', exportPNG.current.exportPNG);
+
+  exportPNG.current.exportPNG();
+}
+
+
   return (
     <>
       {/* 사이드바 섹션 
@@ -103,7 +124,11 @@ function SideBar(){
 
 
 
-        <div className="toggle-tab tab4"></div>
+        <div className="toggle-tab tab4" >
+         
+          
+          <button onClick={handleDownloadPNG}>PNG 다운로드</button>
+        </div>
         
       </div>
       

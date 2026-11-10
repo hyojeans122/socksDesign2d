@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useImperativeHandle, useRef } from 'react';
 import { Canvas, loadSVGFromURL, util, FabricImage } from 'fabric';
 import bodySvg from '../assets/body.svg';
 import cuffSvg from '../assets/cuff.svg';
@@ -6,7 +6,7 @@ import heelSvg from '../assets/heel.svg';
 import toeSvg from '../assets/toe.svg';
 import { useSelector, useDispatch } from 'react-redux';
 
-function SockCanvas() {
+function SockCanvas({ ref }) {
   const canvasRef = useRef(null);// HTML canvas 참조
   const fabricRef = useRef(null); // Fabric Canvas 객체 참조
   const sockSvg = useRef({body: null, cuff: null, heel: null, toe: null}); // sock svg Fabric객체 참조
@@ -17,35 +17,69 @@ function SockCanvas() {
      
     //SVG 파일을 Fabric 객체로 변환하는 함수
     async function addSvg(url,section) {
-    const { objects, options } = await loadSVGFromURL(url);
-    const svgObject = util.groupSVGElements(objects, options);
+        const { objects, options } = await loadSVGFromURL(url);
+        const svgObject = util.groupSVGElements(objects, options);
 
-    svgObject.set({
-        fill: 'white',
-        selectable: false,
-        evented: false,
-    });
+        svgObject.set({
+            fill: 'white',
+            selectable: false,
+            evented: false,
+        });
 
-    if (url === bodySvg) {
-        sockShapeRef.current = svgObject;
-    }
-
-    sockSvg.current[section] = svgObject;
-
-    fabricRef.current.add(svgObject);
-
-
+        if (url === bodySvg) {
+            sockShapeRef.current = svgObject;
+        }
+        sockSvg.current[section] = svgObject;
+        fabricRef.current.add(svgObject);
     }
 
 
+    // 양말 svg 색상 변경 함수
     function editSvg(section, color) {
-    //sockColor [{},{},{},{}] 로 되어 있어서 아래 코드 구조변경필요함
-    sockSvg.current[section].set({
-        fill: color,
+        sockSvg.current[section].set({
+            fill: color,
     });
-
-    fabricRef.current.requestRenderAll();
+        fabricRef.current.requestRenderAll();
     }
+
+    // canvas 위 디자인 png로 변환해주는 함수
+    // function exportPNG() {
+    //     const canvas = fabricRef.current;
+
+    //     const pngUrl = canvas.toDataURL({
+    //         format: 'png',
+    //         multiplier: 2,
+    //     });
+
+        
+    // }
+
+    function exportPNG() {
+        console.log('4. 자식 exportPNG 실행');
+
+        const canvas = fabricRef.current;
+        console.log('5. Fabric Canvas:', canvas);
+
+        const pngUrl = canvas.toDataURL({
+            format: 'png',
+            multiplier: 2,
+        });
+
+        console.log('6. 생성된 PNG URL:', pngUrl);
+         // 2. 다운로드용 a 태그 생성
+        const link = document.createElement('a');
+
+        link.href = pngUrl;
+        link.download = 'sock-design.png';
+
+        // 3. 클릭 발생 → 다운로드
+        link.click();
+    }
+
+    useImperativeHandle(ref, () => ({
+    exportPNG,
+    }));
+
 
   // refactor : canvas 생성 useEffect : 최초 마운트 시 1회 실행
     useEffect(() => {
