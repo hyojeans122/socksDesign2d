@@ -29,3 +29,41 @@ export function openDB() {
     });
 }
 
+export async function saveImage(file) {
+
+    const db = await openDB();
+
+    const transaction = db.transaction(
+        STORE_NAME,
+        'readwrite'
+    );
+
+    const store = transaction.objectStore(STORE_NAME);
+
+    store.put(file, 'sockImage');
+}
+
+export async function getImage() {
+
+    const db = await openDB();
+
+    return new Promise((resolve, reject) => {
+
+        const transaction = db.transaction(
+            STORE_NAME,
+            'readonly'
+        );
+
+        const store = transaction.objectStore(STORE_NAME);
+
+        const request = store.get('sockImage');
+
+        request.onsuccess = () => {
+            resolve(request.result);
+        };
+
+        request.onerror = () => {
+            reject(request.error);
+        };
+    });
+}

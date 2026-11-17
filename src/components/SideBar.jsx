@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useSelector,useDispatch } from "react-redux";
 import { changeSockType,changeSockColor, addImg } from "../store/store";
-
+import { saveImage } from '../imageDB';
 
 // 3-3) 파일명과 동일한 SideBar 함수 안에서 useDispatch호출, 메소드 생성을 해야돼. 작성 규칙이야
 function SideBar({ exportPNG }){
@@ -26,15 +26,33 @@ function SideBar({ exportPNG }){
   // 이미지 업로드 기능 시작
   const [image, setImage] = useState(null);
 
-  const handleImageUpload = (e) => {
+  // const handleImageUpload = (e) => {
+  //   const file = e.target.files[0];
+  //   if (!file) return;
+  //   const imageUrl = URL.createObjectURL(file);
+  //   dispatch(addImg(imageUrl));
+  // };
+
+  async function handleImageUpload(e) {
+
     const file = e.target.files[0];
+
     if (!file) return;
-    const imageUrl = URL.createObjectURL(file);
-    dispatch(addImg(imageUrl));
-  };
+
+    // IndexedDB에 원본 이미지 저장
+    await saveImage(file);
+
+    // 현재 화면에서 사용할 임시 URL 생성
+    const imgUrl = URL.createObjectURL(file);
+
+    dispatch(addImg(imgUrl));
+}
   // 이미지 업로드 기능 끝
   
-    function handleClick() {
+
+
+
+  function handleClick() {
     const png = exportPNG.current.exportPNG();
     console.log(png);
   }

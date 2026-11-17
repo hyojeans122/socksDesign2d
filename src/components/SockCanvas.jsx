@@ -6,6 +6,8 @@ import heelSvg from '../assets/heel.svg';
 import toeSvg from '../assets/toe.svg';
 import { useSelector, useDispatch } from 'react-redux';
 import { changeSockColor,changeSockType,addImg } from '../store/store';
+import { getImage } from '../imageDB';
+
 
 function SockCanvas({ ref }) {
   const canvasRef = useRef(null);// HTML canvas 참조
@@ -14,6 +16,7 @@ function SockCanvas({ ref }) {
   const sockColor = useSelector((state) => state.sock.sockColor);
   const imgUrl = useSelector((state)=>state.customSock.img);
   const sockShapeRef = useRef(null); //클리핑 영역
+  const uploadedImgRef = useRef(null);
   const dispatch = useDispatch();
 
 
@@ -33,18 +36,26 @@ function SockCanvas({ ref }) {
   
   
 
-  function restoreSock(){
-    const val = JSON.parse(localStorage.getItem('sockData'));   
-    console.log('localStorage에서 가지고 왔어용 ',val);
-    
-    if (!val) return; // localStorage에 값이 없을 경우 중단
 
-    dispatch(changeSockType(val.sockType));
-    dispatch(changeSockColor(val.sockColor));
-    dispatch(addImg(val.imgUrl));
-  }
   
+async function restoreSock() {
+    const val = JSON.parse(localStorage.getItem('sockData'));
 
+    // 동기 실행
+    if (val) {
+        dispatch(changeSockType(val.sockType));
+        dispatch(changeSockColor(val.sockColor));
+    }
+
+    // 비동기 작업의 결과를 기다림
+    const file = await getImage();
+
+    if (!file) return;
+
+    // getImage() 완료 후 실행
+    const imgUrl = URL.createObjectURL(file);
+    dispatch(addImg(imgUrl));
+}
     
 
 
@@ -149,6 +160,19 @@ function SockCanvas({ ref }) {
 
     },[]);
  
+    // useEffect(() => {
+    //     async function restoreImage() {
+    //         const file = await getImage();
+
+    //         if (!file) return;
+
+    //         const imgUrl = URL.createObjectURL(file);
+
+    //         dispatch(addImg(imgUrl));
+    //     }
+
+    // restoreImage();
+    // }, []);
  
     // refactor : 양말 svg 렌더링 useEffect : 양말 svg 가 변경될 때마다 실행
     useEffect(() => {
@@ -190,6 +214,16 @@ function SockCanvas({ ref }) {
         
     const handleImageUpload = async (e) => {
     try {
+
+
+        if (!imgUrl) return;
+
+        // 기존 이미지가 있다면 Canvas에서 제거
+        if (uploadedImgRef.current) {
+            fabricRef.current.remove(uploadedImgRef.current);
+        }
+
+
         const img = await FabricImage.fromURL(imgUrl);
 
         // 5. 이미지 이동 영역제한 : bodySvg 영역을 이미지 clone:클리핑 영역으로 지정

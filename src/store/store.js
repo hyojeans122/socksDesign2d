@@ -1,6 +1,7 @@
 import { configureStore, createSlice } from '@reduxjs/toolkit'
 
 const sockData = JSON.parse(localStorage.getItem('sockData'));
+
 console.log("redux에서 localStorage color값 출력합니다:",sockData);
 // 양말 종류 상태 값부터 slice 객체로 만들어보자.
 // 어떻게 만들었었지?
@@ -38,7 +39,7 @@ let sock = createSlice({
 let customSock = createSlice({
     name : 'customSock',
     initialState : {
-        img : sockData?.imgUrl ?? '',
+        img : '',
     },
     reducers: {
         addImg(state,action){
