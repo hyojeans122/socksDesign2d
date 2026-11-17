@@ -1,7 +1,26 @@
-function addSvg() {
-  fabricRef.current.add(svgObject);
+async function addSvg(url, section) {
+  // ...
+
+  sockSvg.current[section] = svgObject;
+}import { useRef, useImperativeHandle } from 'react';
+
+function SockCanvas({ ref }) {
+  const fabricCanvasRef = useRef(null);
+
+  useImperativeHandle(ref, () => ({
+    exportPNG() {
+      return fabricCanvasRef.current.toDataURL({
+        format: 'png',
+      });
+    },
+  }));
+
+  return <canvas />;
 }
 
-function editSvg() {
-  fabricRef.current.requestRenderAll();
-}
+export default SockCanvas;
+
+addSvg(bodySvg, 'body');
+addSvg(cuffSvg, 'cuff');
+addSvg(heelSvg, 'heel');
+addSvg(toeSvg, 'toe');

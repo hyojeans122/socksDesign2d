@@ -5,11 +5,10 @@ import SideBar from './components/SideBar';
 import SockView from './components/SockView';
 import SockCanvas from './components/SockCanvas';
 
-
 function App() {
-  //ref객체 생성해서 <SockCanvas에 전달해주기!!
+
+  // 사이드바에서 캔버스의 PNG 내보내기를 호출하도록 ref를 공유한다.
   const sockCanvasRef = useRef(null);
-  
 
   return (
     <>
@@ -17,16 +16,12 @@ function App() {
 
       <SideBar exportPNG={sockCanvasRef}/>
       <SockCanvas ref={sockCanvasRef}/>
-      {/* 양말 뷰 섹션 */}
-      <SockView></SockView>
 
-      
+      <SockView></SockView>
 
     </div>
     </>
   )
 }
-
-
 
 export default App
