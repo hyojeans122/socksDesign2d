@@ -5,6 +5,7 @@ import cuffSvg from '../assets/cuff.svg';
 import heelSvg from '../assets/heel.svg';
 import toeSvg from '../assets/toe.svg';
 import { useSelector, useDispatch } from 'react-redux';
+import { changeSockColor,changeSockType,addImg } from '../store/store';
 
 function SockCanvas({ ref }) {
   const canvasRef = useRef(null);// HTML canvas 참조
@@ -13,15 +14,50 @@ function SockCanvas({ ref }) {
   const sockColor = useSelector((state) => state.sock.sockColor);
   const imgUrl = useSelector((state)=>state.customSock.img);
   const sockShapeRef = useRef(null); //클리핑 영역
+  const dispatch = useDispatch();
 
-     
+
+  function makeSockJson(){
+    //이 페이지에 있는 sockColor, imgUrl, store에 있는 sockType 을 json으로 
+    return JSON.stringify({'sockType':'축구', 'sockColor':sockColor, 'imgUrl':imgUrl});
+  }
+  // localStorage 저장하기
+  function saveLocalStorage(){
+    //sockRef => [sockType : '축구', sockColor : {body: 'white', cuff: 'white', heel: 'white', toe: 'white'}, img : url]
+    
+    const val = makeSockJson();
+    console.log("json 데이터라네!!",val); // 위 데이터 내용으로 json을 출력하는지 확인
+    localStorage.setItem('sockData',val);
+    
+  }
+  
+  
+
+  function restoreSock(){
+    const val = JSON.parse(localStorage.getItem('sockData'));   
+    console.log('localStorage에서 가지고 왔어용 ',val);
+    
+    if (!val) return; // localStorage에 값이 없을 경우 중단
+
+    dispatch(changeSockType(val.sockType));
+    dispatch(changeSockColor(val.sockColor));
+    dispatch(addImg(val.imgUrl));
+  }
+  
+
+    
+
+
+
+
     //SVG 파일을 Fabric 객체로 변환하는 함수
     async function addSvg(url,section) {
         const { objects, options } = await loadSVGFromURL(url);
         const svgObject = util.groupSVGElements(objects, options);
 
         svgObject.set({
-            fill: 'white',
+            //fill: 'white', //여기 각 부위별 컬러값을 넣어주고 싶어.
+            fill: sockColor[section],
             selectable: false,
             evented: false,
         });
@@ -81,8 +117,21 @@ function SockCanvas({ ref }) {
     }));
 
 
+    const loadSockColor = async () => {
+        // 각 SVG를 Fabir객체로 만들기
+        await editSvg('body', sockColor.body);
+        await editSvg('cuff', sockColor.cuff);
+        await editSvg('heel', sockColor.heel);
+        await editSvg('toe', sockColor.toe);
+
+        fabricRef.current.requestRenderAll();
+    };
+
+
   // refactor : canvas 생성 useEffect : 최초 마운트 시 1회 실행
     useEffect(() => {
+
+    console.log('canvas 마운트 할 때 localStorage 값이에용 ',JSON.parse(localStorage.getItem('sockData')));
     // STEP1) Fabric Canvas 생성
     const canvas = new Canvas(canvasRef.current, {
       width: window.innerWidth,
@@ -93,6 +142,7 @@ function SockCanvas({ ref }) {
 
     // 컴포넌트가 unmount 될 때 실행되는 코드입니다
     return () => {
+        console.log('canvas 언마운트 할 때 localStorage 값이에용 ',JSON.parse(localStorage.getItem('sockData')));
         fabricRef.current = null;
         canvas.dispose();
     };
@@ -102,6 +152,8 @@ function SockCanvas({ ref }) {
  
     // refactor : 양말 svg 렌더링 useEffect : 양말 svg 가 변경될 때마다 실행
     useEffect(() => {
+        
+        restoreSock();
         // 양말 SVG를 순서대로 Canvas에 추가
         const loadSock = async () => {
         // 각 SVG를 Fabir객체로 만들기
@@ -114,6 +166,9 @@ function SockCanvas({ ref }) {
         };
 
         loadSock();
+        loadSockColor();
+        saveLocalStorage();
+
     
     },[]); ////////SVG 파일을 현재엔 import한 url로 고정되어 있음. 추후에 양말 형태 state로 구현했을 때 useEffect [양말형태state변수] 로 변경해줘야함. []안에 변수 추가하는 걸 뭐라고 불렀지?
 
@@ -123,18 +178,10 @@ function SockCanvas({ ref }) {
 
   // refactor :  양말 부위별 색상 변경 렌더링 useEffect : 양말 색상(sockColor)가 변경될 때마다 실행
     useEffect(() => {
-        // 양말 SVG를 순서대로 Canvas에 추가
-        const loadSock = async () => {
-        // 각 SVG를 Fabir객체로 만들기
-        await editSvg('body', sockColor.body);
-        await editSvg('cuff', sockColor.cuff);
-        await editSvg('heel', sockColor.heel);
-        await editSvg('toe', sockColor.toe);
+        
 
-        fabricRef.current.requestRenderAll();
-        };
-
-        loadSock();
+        loadSockColor();
+        saveLocalStorage();
     
     },[sockColor]);
 
@@ -178,6 +225,7 @@ function SockCanvas({ ref }) {
     }
     };
     handleImageUpload();
+    saveLocalStorage();
 
     },[imgUrl]);
 
@@ -185,7 +233,8 @@ function SockCanvas({ ref }) {
 
 
 
-
+    
+    
 
 
 
