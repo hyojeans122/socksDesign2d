@@ -1,8 +1,3 @@
-//브라우저 저장공간 만들기
-// IndexedDB
-// └─ sockDesignDB
-//     └─ images
-
 const DB_NAME = 'sockDesignDB';
 const STORE_NAME = 'images';
 
@@ -33,14 +28,16 @@ export async function saveImage(file) {
 
     const db = await openDB();
 
-    const transaction = db.transaction(
-        STORE_NAME,
-        'readwrite'
-    );
-
-    const store = transaction.objectStore(STORE_NAME);
-
-    store.put(file, 'sockImage');
+    // 트랜잭션 완료 후 저장 성공을 알리고, null이면 이미지를 삭제한다.
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction(STORE_NAME, 'readwrite');
+        const store = transaction.objectStore(STORE_NAME);
+        if (file) store.put(file, 'sockImage');
+        else store.delete('sockImage');
+        transaction.oncomplete = () => { db.close(); resolve(); };
+        transaction.onerror = () => { db.close(); reject(transaction.error); };
+        transaction.onabort = () => { db.close(); reject(transaction.error); };
+    });
 }
 
 export async function getImage() {
@@ -57,12 +54,15 @@ export async function getImage() {
         const store = transaction.objectStore(STORE_NAME);
 
         const request = store.get('sockImage');
+        transaction.oncomplete = () => db.close();
+        transaction.onabort = () => { db.close(); reject(transaction.error); };
 
         request.onsuccess = () => {
             resolve(request.result);
         };
 
         request.onerror = () => {
+            db.close();
             reject(request.error);
         };
     });

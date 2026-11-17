@@ -1,215 +1,151 @@
-import { useEffect, useImperativeHandle, useRef } from 'react';
-import { Canvas, loadSVGFromURL, util, FabricImage } from 'fabric';
-import bodySvg from '../assets/body.svg';
-import cuffSvg from '../assets/cuff.svg';
-import heelSvg from '../assets/heel.svg';
-import toeSvg from '../assets/toe.svg';
+import { useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { Canvas, FabricImage, Path } from 'fabric';
 import { useSelector, useDispatch } from 'react-redux';
-import { changeSockColor,changeSockType,addImg } from '../store/store';
+import { addImg } from '../store/store';
 import { getImage } from '../imageDB';
+import { getSockGeometry, sections } from '../sockDesign';
 
-function SockCanvas({ ref }) {
-  const canvasRef = useRef(null);
-  const fabricRef = useRef(null);
-  const sockSvg = useRef({body: null, cuff: null, heel: null, toe: null});
-  const sockColor = useSelector((state) => state.sock.sockColor);
-  const imgUrl = useSelector((state)=>state.customSock.img);
-  const sockShapeRef = useRef(null);
-  const uploadedImgRef = useRef(null);
-  const dispatch = useDispatch();
-
-  // 고정된 양말 종류(축구), 현재 색상과 이미지 URL을 JSON으로 만든다.
-  function makeSockJson(){
-
-    return JSON.stringify({'sockType':'축구', 'sockColor':sockColor, 'imgUrl':imgUrl});
-  }
-
-  // 디자인 정보를 localStorage에 저장한다.
-  function saveLocalStorage(){
-
-    const val = makeSockJson();
-    console.log("json 데이터라네!!",val);
-    localStorage.setItem('sockData',val);
-
-  }
-
-// 저장된 양말 정보를 Redux에 전달하고 IndexedDB의 이미지를 복원한다.
-async function restoreSock() {
-    const val = JSON.parse(localStorage.getItem('sockData'));
-
-    if (val) {
-        dispatch(changeSockType(val.sockType));
-        dispatch(changeSockColor(val.sockColor));
-    }
-
-    const file = await getImage();
-
-    if (!file) return;
-
-    const imgUrl = URL.createObjectURL(file);
-    dispatch(addImg(imgUrl));
+function fitCanvas(canvas, type, zoom) {
+  const top = getSockGeometry(type).top;
+  const height = 690 - top;
+  const scale = Math.min((canvas.width - 90) / 360, (canvas.height - 130) / height, 0.9) * zoom;
+  canvas.setViewportTransform([scale, 0, 0, scale, (canvas.width - 350 * scale) / 2, (canvas.height - height * scale) / 2 - top * scale]);
+  canvas.requestRenderAll();
 }
 
-    // SVG를 Fabric 객체로 변환해 부위별로 보관하고 캔버스에 추가한다.
-    async function addSvg(url,section) {
-        const { objects, options } = await loadSVGFromURL(url);
-        const svgObject = util.groupSVGElements(objects, options);
+function SockCanvas({ ref, zoom, onStatus, onSaveStatus, onSectionChange }) {
+  const hostRef = useRef(null);
+  const canvasRef = useRef(null);
+  const fabricRef = useRef(null);
+  const partsRef = useRef({});
+  const imageRef = useRef(null);
+  const sceneRef = useRef({ type: '축구', zoom: 1 });
+  const [ready, setReady] = useState(false);
+  const [error, setError] = useState('');
+  const { sockType, sockColor } = useSelector((state) => state.sock);
+  const imgUrl = useSelector((state) => state.customSock.img);
+  const dispatch = useDispatch();
 
-        svgObject.set({
-
-            fill: sockColor[section],
-            selectable: false,
-            evented: false,
-        });
-
-        if (url === bodySvg) {
-            sockShapeRef.current = svgObject;
-        }
-        sockSvg.current[section] = svgObject;
-        fabricRef.current.add(svgObject);
-    }
-
-    function editSvg(section, color) {
-        sockSvg.current[section].set({
-            fill: color,
+  // 캔버스를 한 번 생성하고 컨테이너 크기에 맞춰 편집 영역을 조절한다.
+  useEffect(() => {
+    const canvas = new Canvas(canvasRef.current, { selection: false, preserveObjectStacking: true });
+    fabricRef.current = canvas;
+    const observer = new ResizeObserver(([entry]) => {
+      canvas.setDimensions({ width: entry.contentRect.width, height: entry.contentRect.height });
+      fitCanvas(canvas, sceneRef.current.type, sceneRef.current.zoom);
     });
-        fabricRef.current.requestRenderAll();
-    }
-
-    // 캔버스를 2배 해상도의 PNG로 변환해 다운로드한다.
-    function exportPNG() {
-        console.log('4. 자식 exportPNG 실행');
-
-        const canvas = fabricRef.current;
-        console.log('5. Fabric Canvas:', canvas);
-
-        const pngUrl = canvas.toDataURL({
-            format: 'png',
-            multiplier: 2,
-        });
-
-        console.log('6. 생성된 PNG URL:', pngUrl);
-
-        const link = document.createElement('a');
-
-        link.href = pngUrl;
-        link.download = 'sock-design.png';
-
-        link.click();
-    }
-
-    // 부모가 ref를 통해 PNG 내보내기를 호출할 수 있게 한다.
-    useImperativeHandle(ref, () => ({
-    exportPNG,
-    }));
-
-    // Redux의 부위별 색상을 SVG 객체에 반영한다.
-    const loadSockColor = async () => {
-
-        await editSvg('body', sockColor.body);
-        await editSvg('cuff', sockColor.cuff);
-        await editSvg('heel', sockColor.heel);
-        await editSvg('toe', sockColor.toe);
-
-        fabricRef.current.requestRenderAll();
-    };
-
-    // 마운트 시 캔버스를 생성하고 언마운트 시 해제한다.
-    useEffect(() => {
-
-    console.log('canvas 마운트 할 때 localStorage 값이에용 ',JSON.parse(localStorage.getItem('sockData')));
-
-    const canvas = new Canvas(canvasRef.current, {
-      width: window.innerWidth,
-      height: window.innerHeight,
-      backgroundColor: '#f5f5f5',
-    });
-    fabricRef.current=canvas;
-
+    observer.observe(hostRef.current);
+    setReady(true);
     return () => {
-        console.log('canvas 언마운트 할 때 localStorage 값이에용 ',JSON.parse(localStorage.getItem('sockData')));
-        fabricRef.current = null;
-        canvas.dispose();
+      observer.disconnect();
+      fabricRef.current = null;
+      canvas.dispose();
     };
+  }, []);
 
-    },[]);
+  // 양말 종류가 바뀌면 부위별 경로를 다시 만들고 직접 클릭할 수 있게 한다.
+  useEffect(() => {
+    if (!ready || !fabricRef.current) return;
+    const canvas = fabricRef.current;
+    Object.values(partsRef.current).forEach((part) => canvas.remove(part));
+    const geometry = getSockGeometry(sockType);
+    const parts = {};
+    sections.forEach(({ id }) => {
+      const part = new Path(geometry[id], { fill: '#FAF9F6', stroke: '#424D46', strokeWidth: 1.8, strokeLineJoin: 'round', selectable: false, hoverCursor: 'pointer' });
+      part.on('mousedown', () => onSectionChange(id));
+      parts[id] = part;
+      canvas.add(part);
+    });
+    partsRef.current = parts;
+    sceneRef.current.type = sockType;
+    fitCanvas(canvas, sockType, sceneRef.current.zoom);
+  }, [ready, sockType, onSectionChange]);
 
-    // 초기 마운트 시 저장 정보 복원, SVG 로딩과 저장을 시작한다.
-    useEffect(() => {
+  useEffect(() => {
+    if (!ready) return;
+    sections.forEach(({ id }) => partsRef.current[id]?.set({ fill: sockColor[id] }));
+    fabricRef.current?.requestRenderAll();
+  }, [ready, sockType, sockColor]);
 
-        restoreSock();
+  useEffect(() => {
+    sceneRef.current.zoom = zoom;
+    if (fabricRef.current) fitCanvas(fabricRef.current, sockType, zoom);
+  }, [zoom, sockType]);
 
-        const loadSock = async () => {
+  // 이미지 원본은 IndexedDB에서 복원하고 URL은 교체 또는 해제 시 정리한다.
+  useEffect(() => {
+    let cancelled = false;
+    let restoredUrl;
+    getImage().then((file) => {
+      if (!file || cancelled) return;
+      restoredUrl = URL.createObjectURL(file);
+      dispatch(addImg(restoredUrl));
+    }).catch(() => {
+      if (!cancelled) setError('저장된 이미지를 불러오지 못했어요. 다시 업로드해 주세요.');
+    });
+    return () => { cancelled = true; if (restoredUrl) URL.revokeObjectURL(restoredUrl); };
+  }, [dispatch]);
 
-        addSvg(bodySvg, 'body');
-        addSvg(cuffSvg, 'cuff');
-        addSvg(heelSvg, 'heel');
-        addSvg(toeSvg, 'toe');
+  useEffect(() => () => { if (imgUrl) URL.revokeObjectURL(imgUrl); }, [imgUrl]);
 
-        fabricRef.current.requestRenderAll();
-        };
+  // 비동기 로딩 중 URL이나 양말 종류가 바뀌면 이전 결과를 무시한다.
+  useEffect(() => {
+    if (!ready || !fabricRef.current) return;
+    const canvas = fabricRef.current;
+    let cancelled = false;
+    if (imageRef.current) canvas.remove(imageRef.current);
+    imageRef.current = null;
+    setError('');
+    onStatus(imgUrl ? 'loading' : 'ready');
+    if (!imgUrl) { canvas.requestRenderAll(); return; }
+    FabricImage.fromURL(imgUrl).then((image) => {
+      if (cancelled) { image.dispose(); return; }
+      const geometry = getSockGeometry(sockType);
+      image.scale(80 / Math.max(image.width, image.height));
+      image.set({ left: 200, top: geometry.imageY, originX: 'center', originY: 'center', cornerColor: '#315B48', cornerSize: 9, transparentCorners: false, borderColor: '#315B48' });
+      image.clipPath = new Path(geometry.body, { absolutePositioned: true, fill: '#000', strokeWidth: 0 });
+      imageRef.current = image;
+      canvas.add(image);
+      canvas.requestRenderAll();
+      onStatus('ready');
+    }).catch(() => {
+      if (cancelled) return;
+      setError('이미지를 표시하지 못했어요. 다른 이미지를 선택해 주세요.');
+      onStatus('error');
+    });
+    return () => { cancelled = true; };
+  }, [ready, imgUrl, sockType, onStatus]);
 
-        loadSock();
-        loadSockColor();
-        saveLocalStorage();
-
-    },[]);
-
-    // 색상이 바뀌면 SVG 색상과 저장 데이터를 갱신한다.
-    useEffect(() => {
-
-        loadSockColor();
-        saveLocalStorage();
-
-    },[sockColor]);
-
-    // 이미지 URL이 바뀌면 이미지를 배치하고 몸체 내부만 표시한다.
-    useEffect(() => {
-
-    const handleImageUpload = async (e) => {
+  useEffect(() => {
     try {
-
-        if (!imgUrl) return;
-
-        if (uploadedImgRef.current) {
-            fabricRef.current.remove(uploadedImgRef.current);
-        }
-
-        const img = await FabricImage.fromURL(imgUrl);
-
-        img.scaleToWidth(70);
-        img.scaleToHeight(70);
-
-        const center = sockShapeRef.current.getCenterPoint();
-
-        img.set({
-            left: center.x + 25,
-            top: center.y - 200,
-            originX: 'center',
-            originY: 'center',
-        });
-
-        // 몸체를 복제해 캔버스 좌표 기준의 클리핑 마스크로 사용한다.
-        const sockShape = await sockShapeRef.current.clone();
-
-        sockShape.set({
-            absolutePositioned: true,
-        });
-        img.clipPath = sockShape;
-
-        fabricRef.current.add(img);
-        fabricRef.current.requestRenderAll();
-    } finally {
-        // 로딩 작업이 끝나면 임시 이미지 URL을 해제한다.
-        URL.revokeObjectURL(imgUrl);
+      localStorage.setItem('sockData', JSON.stringify({ sockType, sockColor }));
+      onSaveStatus('자동 저장됨');
+    } catch {
+      onSaveStatus('저장하지 못했어요');
     }
-    };
-    handleImageUpload();
-    saveLocalStorage();
+  }, [sockType, sockColor, onSaveStatus]);
 
-    },[imgUrl]);
+  // 화면 확대 비율과 관계없이 전체 양말을 투명 배경 PNG로 내보낸다.
+  useImperativeHandle(ref, () => ({
+    exportPNG() {
+      const canvas = fabricRef.current;
+      if (!canvas) return;
+      const previous = [...canvas.viewportTransform];
+      canvas.discardActiveObject();
+      try {
+        canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+        const link = document.createElement('a');
+        link.href = canvas.toDataURL({ format: 'png', multiplier: 2, left: 0, top: 0, width: 360, height: 710 });
+        link.download = 'sock-design.png';
+        link.click();
+      } finally {
+        canvas.setViewportTransform(previous);
+        canvas.requestRenderAll();
+      }
+    },
+  }), []);
 
-  return <canvas ref={canvasRef} />;
+  return <div ref={hostRef} className="canvas-host"><canvas ref={canvasRef} aria-label={`${sockType} 양말 편집 캔버스`} />{error && <div className="canvas-error" role="alert">{error}</div>}</div>;
 }
 
 export default SockCanvas;

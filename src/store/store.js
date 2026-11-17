@@ -1,32 +1,41 @@
 import { configureStore, createSlice } from '@reduxjs/toolkit'
+import { sockTypes } from '../sockDesign';
 
 // 저장된 디자인을 읽어 양말 상태의 초기값으로 사용한다.
-const sockData = JSON.parse(localStorage.getItem('sockData'));
+let sockData;
+try {
+    sockData = JSON.parse(localStorage.getItem('sockData'));
+} catch {
+    sockData = null;
+}
 
-console.log("redux에서 localStorage color값 출력합니다:",sockData);
+function savedColor(section, fallback) {
+    const value = sockData?.sockColor?.[section];
+    return typeof value === 'string' && CSS.supports('color', value) ? value : fallback;
+}
+
 // 양말 종류와 부위별 색상을 관리한다.
 let sock = createSlice({
     name: 'sock',
     initialState: { 
-        sockType: sockData?.sockType ??'축구',
+        sockType: sockTypes.includes(sockData?.sockType) ? sockData.sockType : '축구',
         sockColor : {
-            body : sockData?.sockColor?.body ?? 'white', 
-            cuff: sockData?.sockColor?.cuff ?? 'white',
-            heel: sockData?.sockColor?.heel ?? 'white',
-            toe: sockData?.sockColor?.toe ?? 'white'
+            body: savedColor('body', '#FAF9F6'),
+            cuff: savedColor('cuff', '#315B48'),
+            heel: savedColor('heel', '#A7B9A1'),
+            toe: savedColor('toe', '#315B48')
         } 
     },
 
     reducers: {
         changeSockType(state,action){
-            state.sockType = action.payload;
+            if (sockTypes.includes(action.payload)) state.sockType = action.payload;
         },
         changeSockColor(state,action){
             // payload의 section에 해당하는 부위만 color로 변경한다.
             const sect = action.payload.section;
             const col = action.payload.color;
-            console.log("payload 출력들어가유~", sect);
-            state.sockColor[sect] = col;
+            if (Object.hasOwn(state.sockColor, sect)) state.sockColor[sect] = col;
 
         }
     }
