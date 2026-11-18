@@ -1,0 +1,281 @@
+import { useEffect, useImperativeHandle, useRef } from 'react';
+import { Canvas, loadSVGFromURL, util, FabricImage } from 'fabric';
+import bodySvg from '../assets/body.svg';
+import cuffSvg from '../assets/cuff.svg';
+import heelSvg from '../assets/heel.svg';
+import toeSvg from '../assets/toe.svg';
+import { useSelector, useDispatch } from 'react-redux';
+import { changeSockColor,changeSockType,addImg } from '../store/store';
+import { getImage } from '../imageDB';
+
+
+function SockCanvas({ ref }) {
+  const canvasRef = useRef(null);// HTML canvas 참조
+  const fabricRef = useRef(null); // Fabric Canvas 객체 참조
+  const sockSvg = useRef({body: null, cuff: null, heel: null, toe: null}); // sock svg Fabric객체 참조
+  const sockColor = useSelector((state) => state.sock.sockColor);
+  const imgUrl = useSelector((state)=>state.customSock.img);
+  const sockShapeRef = useRef(null); //클리핑 영역
+  const uploadedImgRef = useRef(null);
+  const dispatch = useDispatch();
+
+
+  function makeSockJson(){
+    //이 페이지에 있는 sockColor, imgUrl, store에 있는 sockType 을 json으로 
+    return JSON.stringify({'sockType':'축구', 'sockColor':sockColor, 'imgUrl':imgUrl});
+  }
+  // localStorage 저장하기
+  function saveLocalStorage(){
+    //sockRef => [sockType : '축구', sockColor : {body: 'white', cuff: 'white', heel: 'white', toe: 'white'}, img : url]
+    
+    const val = makeSockJson();
+    console.log("json 데이터라네!!",val); // 위 데이터 내용으로 json을 출력하는지 확인
+    localStorage.setItem('sockData',val);
+    
+  }
+  
+  
+
+
+  
+async function restoreSock() {
+    const val = JSON.parse(localStorage.getItem('sockData'));
+
+    // 동기 실행
+    if (val) {
+        dispatch(changeSockType(val.sockType));
+        dispatch(changeSockColor(val.sockColor));
+    }
+
+    // 비동기 작업의 결과를 기다림
+    const file = await getImage();
+
+    if (!file) return;
+
+    // getImage() 완료 후 실행
+    const imgUrl = URL.createObjectURL(file);
+    dispatch(addImg(imgUrl));
+}
+    
+
+
+
+
+    //SVG 파일을 Fabric 객체로 변환하는 함수
+    async function addSvg(url,section) {
+        const { objects, options } = await loadSVGFromURL(url);
+        const svgObject = util.groupSVGElements(objects, options);
+
+        svgObject.set({
+            //fill: 'white', //여기 각 부위별 컬러값을 넣어주고 싶어.
+            fill: sockColor[section],
+            selectable: false,
+            evented: false,
+        });
+
+        if (url === bodySvg) {
+            sockShapeRef.current = svgObject;
+        }
+        sockSvg.current[section] = svgObject;
+        fabricRef.current.add(svgObject);
+    }
+
+
+    // 양말 svg 색상 변경 함수
+    function editSvg(section, color) {
+        sockSvg.current[section].set({
+            fill: color,
+    });
+        fabricRef.current.requestRenderAll();
+    }
+
+    // canvas 위 디자인 png로 변환해주는 함수
+    // function exportPNG() {
+    //     const canvas = fabricRef.current;
+
+    //     const pngUrl = canvas.toDataURL({
+    //         format: 'png',
+    //         multiplier: 2,
+    //     });
+
+        
+    // }
+
+    function exportPNG() {
+        console.log('4. 자식 exportPNG 실행');
+
+        const canvas = fabricRef.current;
+        console.log('5. Fabric Canvas:', canvas);
+
+        const pngUrl = canvas.toDataURL({
+            format: 'png',
+            multiplier: 2,
+        });
+
+        console.log('6. 생성된 PNG URL:', pngUrl);
+         // 2. 다운로드용 a 태그 생성
+        const link = document.createElement('a');
+
+        link.href = pngUrl;
+        link.download = 'sock-design.png';
+
+        // 3. 클릭 발생 → 다운로드
+        link.click();
+    }
+
+    useImperativeHandle(ref, () => ({
+    exportPNG,
+    }));
+
+
+    const loadSockColor = async () => {
+        // 각 SVG를 Fabir객체로 만들기
+        await editSvg('body', sockColor.body);
+        await editSvg('cuff', sockColor.cuff);
+        await editSvg('heel', sockColor.heel);
+        await editSvg('toe', sockColor.toe);
+
+        fabricRef.current.requestRenderAll();
+    };
+
+
+  // refactor : canvas 생성 useEffect : 최초 마운트 시 1회 실행
+    useEffect(() => {
+
+    console.log('canvas 마운트 할 때 localStorage 값이에용 ',JSON.parse(localStorage.getItem('sockData')));
+    // STEP1) Fabric Canvas 생성
+    const canvas = new Canvas(canvasRef.current, {
+      width: window.innerWidth,
+      height: window.innerHeight,
+      backgroundColor: '#f5f5f5',
+    });
+    fabricRef.current=canvas;
+
+    // 컴포넌트가 unmount 될 때 실행되는 코드입니다
+    return () => {
+        console.log('canvas 언마운트 할 때 localStorage 값이에용 ',JSON.parse(localStorage.getItem('sockData')));
+        fabricRef.current = null;
+        canvas.dispose();
+    };
+
+    },[]);
+ 
+    // useEffect(() => {
+    //     async function restoreImage() {
+    //         const file = await getImage();
+
+    //         if (!file) return;
+
+    //         const imgUrl = URL.createObjectURL(file);
+
+    //         dispatch(addImg(imgUrl));
+    //     }
+
+    // restoreImage();
+    // }, []);
+ 
+    // refactor : 양말 svg 렌더링 useEffect : 양말 svg 가 변경될 때마다 실행
+    useEffect(() => {
+        
+        restoreSock();
+        // 양말 SVG를 순서대로 Canvas에 추가
+        const loadSock = async () => {
+        // 각 SVG를 Fabir객체로 만들기
+        addSvg(bodySvg, 'body');
+        addSvg(cuffSvg, 'cuff');
+        addSvg(heelSvg, 'heel');
+        addSvg(toeSvg, 'toe');
+
+        fabricRef.current.requestRenderAll();
+        };
+
+        loadSock();
+        loadSockColor();
+        saveLocalStorage();
+
+    
+    },[]); ////////SVG 파일을 현재엔 import한 url로 고정되어 있음. 추후에 양말 형태 state로 구현했을 때 useEffect [양말형태state변수] 로 변경해줘야함. []안에 변수 추가하는 걸 뭐라고 불렀지?
+
+
+
+
+
+  // refactor :  양말 부위별 색상 변경 렌더링 useEffect : 양말 색상(sockColor)가 변경될 때마다 실행
+    useEffect(() => {
+        
+
+        loadSockColor();
+        saveLocalStorage();
+    
+    },[sockColor]);
+
+  // refactor :  첨부 이미지 렌더링 및 클리핑 마스크로 이동영역제한 useEffect : 첨부이미지(imgUrl)이 변경될 때마다 실행 
+    useEffect(() => {
+        
+    const handleImageUpload = async (e) => {
+    try {
+
+
+        if (!imgUrl) return;
+
+        // 기존 이미지가 있다면 Canvas에서 제거
+        if (uploadedImgRef.current) {
+            fabricRef.current.remove(uploadedImgRef.current);
+        }
+
+
+        const img = await FabricImage.fromURL(imgUrl);
+
+        // 5. 이미지 이동 영역제한 : bodySvg 영역을 이미지 clone:클리핑 영역으로 지정
+        // 5-1. 이미지 크기 설정
+        img.scaleToWidth(70);
+        img.scaleToHeight(70);
+
+        // 5-2. bodySvg 중심 좌표 가져오기
+        const center = sockShapeRef.current.getCenterPoint();
+
+        // 5-3. 이미지 중심을 bodySvg 중심에 배치
+        img.set({
+            left: center.x + 25,
+            top: center.y - 200,
+            originX: 'center',
+            originY: 'center',
+        });
+
+        // 5-4. 클리핑 적용
+        const sockShape = await sockShapeRef.current.clone();
+
+        sockShape.set({
+            absolutePositioned: true,
+        });
+        img.clipPath = sockShape;
+        // 5. end
+
+
+        fabricRef.current.add(img);
+        fabricRef.current.requestRenderAll();
+    } finally {
+        URL.revokeObjectURL(imgUrl);
+    }
+    };
+    handleImageUpload();
+    saveLocalStorage();
+
+    },[imgUrl]);
+
+
+
+
+
+    
+    
+
+
+
+
+
+
+  return <canvas ref={canvasRef} />;
+}
+
+export default SockCanvas;

@@ -20,10 +20,10 @@ let sock = createSlice({
     initialState: { 
         sockType: sockTypes.includes(sockData?.sockType) ? sockData.sockType : '축구',
         sockColor : {
-            body: savedColor('body', '#FAF9F6'),
-            cuff: savedColor('cuff', '#315B48'),
-            heel: savedColor('heel', '#A7B9A1'),
-            toe: savedColor('toe', '#315B48')
+            body: savedColor('body', '#ffffff'),
+            cuff: savedColor('cuff', '#ffffff'),
+            heel: savedColor('heel', '#ffffff'),
+            toe: savedColor('toe', '#ffffff')
         } 
     },
 
